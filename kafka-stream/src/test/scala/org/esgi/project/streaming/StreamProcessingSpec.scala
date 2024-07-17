@@ -19,9 +19,19 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       "42"
     )
 
+//    val views = {
+//      "id": 1,
+//      "title": "Kill Bill",
+//      "view_category": "half"
+//    }
+//    val likes = {
+//      "id": 1,
+//      "score": 4.8
+//    }
+
     val topologyTestDriver = new TopologyTestDriver(
-      StreamProcessing.builder.build(),
-      StreamProcessing.buildProperties
+      StreamProcessingTest.builder.build(),
+      StreamProcessingTest.buildProperties
     )
 
     val wordTopic = topologyTestDriver
