@@ -6,6 +6,7 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream.{KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
+import org.esgi.project.api.models.{Like, View}
 
 import java.util.Properties
 import java.time.Instant
@@ -22,15 +23,17 @@ object StreamProcessingTest extends PlayJsonSupport {
   // defining processing graph
   val builder: StreamsBuilder = new StreamsBuilder
 
-  val wordTopic = "words"
-  val wordCountStoreName = "word-count-store"
+  val viewTopic = "views"
+  val viewCountStorename = "view-count-store"
+  val likeTopic = "likes"
+  val likeCountStorename = "like-count-store"
 
-  val words = builder.stream[String, String](wordTopic)
+  val views = builder.stream[String, View](viewTopic)
+  val likes = builder.stream[String, Like](likeTopic)
 
-  val wordCounts: KTable[String, Long] = words
-    .flatMapValues(textLine => textLine.toLowerCase.split("\\W+"))
-    .groupBy((_, word) => word)
-    .count()(Materialized.as(wordCountStoreName))
+  val viewCountsById: KTable[Int, Long] = views
+    .groupBy((_, view) => view.id)
+    .count()(Materialized.as(viewCountStorename))
 
   def run(): KafkaStreams = {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)

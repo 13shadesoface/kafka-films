@@ -5,6 +5,7 @@ import org.apache.kafka.streams.TopologyTestDriver
 import org.apache.kafka.streams.scala.serialization.Serdes
 import org.apache.kafka.streams.state.KeyValueStore
 import org.apache.kafka.streams.test.TestRecord
+import org.esgi.project.api.models.View
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.jdk.CollectionConverters._
@@ -19,11 +20,10 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       "42"
     )
 
-//    val views = {
-//      "id": 1,
-//      "title": "Kill Bill",
-//      "view_category": "half"
-//    }
+    val views = List[View](
+      View(1, "Kill Bill", "half"),
+      View(1, "Kill Bill", "half")
+    )
 //    val likes = {
 //      "id": 1,
 //      "score": 4.8
@@ -34,29 +34,30 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       StreamProcessingTest.buildProperties
     )
 
-    val wordTopic = topologyTestDriver
+    val viewTopic = topologyTestDriver
       .createInputTopic(
-        StreamProcessing.wordTopic,
-        Serdes.stringSerde.serializer(),
-        Serdes.stringSerde.serializer()
+        StreamProcessingTest.viewTopic,
+        Serdes.intSerde.serializer(),
+        toSerializer[View]
       )
 
-    val wordCountStore: KeyValueStore[String, Long] =
+    val viewCountStore: KeyValueStore[Int, Long] =
       topologyTestDriver
-        .getKeyValueStore[String, Long](
-          StreamProcessing.wordCountStoreName
+        .getKeyValueStore[Int, Long](
+          StreamProcessingTest.viewCountStorename
         )
 
     // When
-    wordTopic.pipeRecordList(
-      messages.map(message => new TestRecord(message, message)).asJava
+    viewTopic.pipeRecordList(
+      views.map(view => new TestRecord(view.id, view)).asJava
     )
 
     // Then
-    assert(wordCountStore.get("hello") == 2)
-    assert(wordCountStore.get("world") == 1)
-    assert(wordCountStore.get("moon") == 1)
-    assert(wordCountStore.get("foobar") == 1)
-    assert(wordCountStore.get("42") == 1)
+    assert(viewCountStore.get(1) == 2)
+//    assert(viewCountStore.get("hello") == 2)
+//    assert(viewCountStore.get("world") == 1)
+//    assert(viewCountStore.get("moon") == 1)
+//    assert(viewCountStore.get("foobar") == 1)
+//    assert(viewCountStore.get("42") == 1)
   }
 }
