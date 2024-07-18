@@ -5,7 +5,7 @@
 
 Vous êtes arrivé dans la société KazaaMovies, spécialisée dans le streaming de films à destination des particuliers.
 
-Ils viennent de mettre en place après plusieurs années de développement une dimension sociale à leur offre de streaming, laquelle va vous fournir des informations sur les interactions utilisateurs et leurs vues, mais ils n'ont mis en place que la première partie technique: la récupération des données.
+Ils viennent de mettre en place après plusieurs années de développement une dimension sociale à leur offre de streaming, laquelle va vous fournir des informations sur les interactions utilisateurs et leurs vues, mais ils n'ont mis en place que la première partie technique : la récupération des données.
 
 **Votre but: rentre utilisable ces données, lesquelles arrivent dans plusieurs topics Kafka.**
 
@@ -99,7 +99,8 @@ Les fonctionnalités décrites doivent être exposées via une API REST avec le 
       "start_only": 2000,
       "half": 100,
       "full": 90
-    },
+    }
+  }
 }
 ```
 
@@ -122,7 +123,7 @@ Les fonctionnalités décrites doivent être exposées via une API REST avec le 
 		"id": 42,
     "title": "movie title 3",
     "score": 8.1
-  },
+  }
 ]
 ```
 
@@ -145,7 +146,7 @@ Les fonctionnalités décrites doivent être exposées via une API REST avec le 
 		"id": 1,
     "title": "movie title 3",
     "views": 2778
-  },
+  }
 ]
 ```
 
@@ -168,7 +169,7 @@ Les fonctionnalités décrites doivent être exposées via une API REST avec le 
 		"id": 100,
     "title": "movie title 3",
     "score": 3
-  },
+  }
 ]
 ```
 
@@ -191,7 +192,7 @@ Les fonctionnalités décrites doivent être exposées via une API REST avec le 
 		"id": 119,
     "title": "movie title 3",
     "views": 12
-  },
+  }
 ]
 ```
 
