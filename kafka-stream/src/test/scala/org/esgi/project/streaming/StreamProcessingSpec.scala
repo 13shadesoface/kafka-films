@@ -5,8 +5,7 @@ import org.apache.kafka.streams.TopologyTestDriver
 import org.apache.kafka.streams.scala.serialization.Serdes
 import org.apache.kafka.streams.state.KeyValueStore
 import org.apache.kafka.streams.test.TestRecord
-import org.esgi.project.api.models.View
-import org.esgi.project.streaming.models.Like
+import org.esgi.project.api.models.{Like, View}
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.jdk.CollectionConverters._
@@ -23,7 +22,9 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
 
     val views = List[View](
       View(1, "Kill Bill", "half"),
-      View(1, "Kill Bill", "half")
+      View(1, "Kill Bill", "half"),
+      View(1, "Kill Bill", "full"),
+      View(2, "Matrix", "full")
     )
 
     val likes = List[Like](
@@ -56,10 +57,16 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
         toSerializer[Like]
       )
 
-    val viewCountStore: KeyValueStore[Int, Long] =
+    val viewCountStore: KeyValueStore[String, Long] =
       topologyTestDriver
-        .getKeyValueStore[Int, Long](
-          StreamProcessingTest.viewCountStorename
+        .getKeyValueStore[String, Long](
+          StreamProcessingTest.viewCountByIdCategoryStorename
+        )
+
+    val viewCountWindowedStore: KeyValueStore[String, Long] =
+      topologyTestDriver
+        .getKeyValueStore[String, Long](
+          StreamProcessingTest.viewCountByWindowedIdAndCategoryStore
         )
 
 
@@ -79,6 +86,10 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
     )
 
     // Then
+    assert(viewCountStore.get("1-half") == 2)
+    assert(viewCountStore.get("1-full") == 1)
+    assert(viewCountStore.get("2-half") == 0)
+//    assert(viewCountWindowedStore.get("2-half") == 0)
     assert(viewCountStore.get(1) == 2)
     assert(likeCountStore.get(1) == 2)
 //    assert(viewCountStore.get("hello") == 2)

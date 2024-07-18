@@ -3,6 +3,7 @@ package org.esgi.project.streaming
 import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.streams.kstream.{TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream.{KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
@@ -10,6 +11,7 @@ import org.esgi.project.api.models.{Like, View}
 
 import java.util.Properties
 import java.time.Instant
+import java.time.Duration
 
 object StreamProcessingTest extends PlayJsonSupport {
 
@@ -24,16 +26,26 @@ object StreamProcessingTest extends PlayJsonSupport {
   val builder: StreamsBuilder = new StreamsBuilder
 
   val viewTopic = "views"
-  val viewCountStorename = "view-count-store"
+  val viewCountByIdCategoryStorename = "view-count-store"
+  val viewCountByWindowedIdAndCategoryStore = "view-count-windowed-store"
   val likeTopic = "likes"
   val likeCountStorename = "like-count-store"
 
   val views = builder.stream[String, View](viewTopic)
   val likes = builder.stream[String, Like](likeTopic)
 
-  val viewCountsById: KTable[Int, Long] = views
-    .groupBy((_, view) => view.id)
-    .count()(Materialized.as(viewCountStorename))
+//  val viewCountsById: KTable[Int, Long] = views
+//    .groupBy((_, view) => view.id)
+//    .count()(Materialized.as(viewCountStorename))
+
+  val viewCountsByIdAndCategory: KTable[String, Long] = views
+    .groupBy((_, view) => s"${view.id}-${view.view_category}")
+    .count()(Materialized.as(viewCountByIdCategoryStorename))
+
+  val viewWindowedCounts: KTable[Windowed[String], Long] = views
+    .groupBy((_, view) => s"${view.id}-${view.view_category}")
+    .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)).advanceBy(Duration.ofMinutes(1)))
+    .count()(Materialized.as(viewCountByWindowedIdAndCategoryStore))
 
   val likesCountsById: KTable[Int, Long] = likes
     .groupBy((_, like) => like.id)
