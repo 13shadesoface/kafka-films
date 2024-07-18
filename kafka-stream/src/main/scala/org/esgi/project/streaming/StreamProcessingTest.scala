@@ -3,9 +3,10 @@ package org.esgi.project.streaming
 import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.streams.kstream.{TimeWindows, Windowed}
+import org.apache.kafka.streams.kstream.{JoinWindows, TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
-import org.apache.kafka.streams.scala.kstream.{KTable, Materialized}
+
+import org.apache.kafka.streams.scala.kstream.{KGroupedStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig, Topology}
 import org.esgi.project.api.models.{Like, View}
 import org.esgi.project.streaming.StreamProcessingTest.highScoreStoreName
@@ -28,6 +29,8 @@ object StreamProcessingTest extends PlayJsonSupport {
   val builder: StreamsBuilder = new StreamsBuilder
 
   val viewTopic = "views"
+  val viewCountByWindowedIdAndCategoryStoreTest = "view-count-windowed-test-store"
+
   val likeTopic = "likes"
 
   val viewCountByIdCategoryStorename = "view-count-store"
@@ -40,19 +43,13 @@ object StreamProcessingTest extends PlayJsonSupport {
   val views = builder.stream[String, View](viewTopic)
   val likes = builder.stream[String, Like](likeTopic)
 
-//  val viewCountsById: KTable[Int, Long] = views
-//    .groupBy((_, view) => view.id)
-//    .count()(Materialized.as(viewCountStorename))
+  val viewGroupedByIdAndCategory: KGroupedStream[String, View] =
+    views.groupBy((_, view) => s"${view.id}-${view.view_category}")
 
-  // Calculer le nombre de vues par film et catégorie
+  val viewCountsByIdAndCategory: KTable[String, Long] =
+    viewGroupedByIdAndCategory.count()(Materialized.as(viewCountByIdCategoryStorename))
 
-  val viewCountsByIdAndCategory: KTable[String, Long] = views
-    .groupBy((_, view) => s"${view.id}-${view.view_category}")
-    .count()(Materialized.as(viewCountByIdCategoryStorename))
-
-  // Calculer le nombre de vues par fenêtre glissante
-  val viewWindowedCounts: KTable[Windowed[String], Long] = views
-    .groupBy((_, view) => s"${view.id}-${view.view_category}")
+  val viewWindowedCounts: KTable[Windowed[String], Long] = viewGroupedByIdAndCategory
     .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)).advanceBy(Duration.ofMinutes(1)))
     .count()(Materialized.as(viewCountByWindowedIdAndCategoryStore))
 
