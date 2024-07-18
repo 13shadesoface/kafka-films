@@ -104,31 +104,6 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
     assert(windowedResults2Start == 0)
     assert(windowedResults2Half == 1)
     assert(windowedResults2Full == 0)
-
-    val windowedFullResults1Start =
-      fetchWindowedResults(
-        viewCountWindowedStore,
-        "1-start_only",
-        startTime.truncatedTo(ChronoUnit.MINUTES),
-        fullWindowEnd
-      )
-    val windowedFullResults1Half =
-      fetchWindowedResults(
-        viewCountWindowedStore,
-        "1-half",
-        startTime.truncatedTo(ChronoUnit.MINUTES),
-        fullWindowEnd
-      )
-    val windowedFullResults1Full =
-      fetchWindowedResults(
-        viewCountWindowedStore,
-        "1-full",
-        startTime.truncatedTo(ChronoUnit.MINUTES),
-        fullWindowEnd
-      )
-//    assert(windowedFullResults1Start == 1)
-//    assert(windowedFullResults1Half == 3)
-//    assert(windowedFullResults1Full == 1)
   }
 
   def fetchWindowedResults(store: WindowStore[String, Long], key: String, from: Instant, to: Instant): Long = {

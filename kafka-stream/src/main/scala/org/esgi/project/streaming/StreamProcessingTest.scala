@@ -35,10 +35,6 @@ object StreamProcessingTest extends PlayJsonSupport {
   val views = builder.stream[String, View](viewTopic)
   val likes = builder.stream[String, Like](likeTopic)
 
-//  val viewCountsByIdAndCategory: KTable[String, Long] = views
-//    .groupBy((_, view) => s"${view.id}-${view.view_category}")
-//    .count()(Materialized.as(viewCountByIdCategoryStorename))
-
   val viewGroupedByIdAndCategory: KGroupedStream[String, View] =
     views.groupBy((_, view) => s"${view.id}-${view.view_category}")
 
