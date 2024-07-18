@@ -3,12 +3,15 @@ package org.esgi.project.streaming
 import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.streams.kstream.{JoinWindows, TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
-import org.apache.kafka.streams.scala.kstream.{KTable, Materialized}
+import org.apache.kafka.streams.scala.kstream.{KGroupedStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
+import org.esgi.project.api.models.{Like, View}
 
 import java.util.Properties
 import java.time.Instant
+import java.time.Duration
 
 object StreamProcessingTest extends PlayJsonSupport {
 
@@ -22,15 +25,25 @@ object StreamProcessingTest extends PlayJsonSupport {
   // defining processing graph
   val builder: StreamsBuilder = new StreamsBuilder
 
-  val wordTopic = "words"
-  val wordCountStoreName = "word-count-store"
+  val viewTopic = "views"
+  val viewCountByIdCategoryStorename = "view-count-store"
+  val viewCountByWindowedIdAndCategoryStore = "view-count-windowed-store"
+  val viewCountByWindowedIdAndCategoryStoreTest = "view-count-windowed-test-store"
+  val likeTopic = "likes"
+  val likeCountStorename = "like-count-store"
 
-  val words = builder.stream[String, String](wordTopic)
+  val views = builder.stream[String, View](viewTopic)
+  val likes = builder.stream[String, Like](likeTopic)
 
-  val wordCounts: KTable[String, Long] = words
-    .flatMapValues(textLine => textLine.toLowerCase.split("\\W+"))
-    .groupBy((_, word) => word)
-    .count()(Materialized.as(wordCountStoreName))
+  val viewGroupedByIdAndCategory: KGroupedStream[String, View] =
+    views.groupBy((_, view) => s"${view.id}-${view.view_category}")
+
+  val viewCountsByIdAndCategory: KTable[String, Long] =
+    viewGroupedByIdAndCategory.count()(Materialized.as(viewCountByIdCategoryStorename))
+
+  val viewWindowedCounts: KTable[Windowed[String], Long] = viewGroupedByIdAndCategory
+    .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)).advanceBy(Duration.ofMinutes(1)))
+    .count()(Materialized.as(viewCountByWindowedIdAndCategoryStore))
 
   def run(): KafkaStreams = {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
