@@ -35,6 +35,10 @@ object StreamProcessingTest extends PlayJsonSupport {
     .groupBy((_, view) => view.id)
     .count()(Materialized.as(viewCountStorename))
 
+  val likesCountsById: KTable[Int, Long] = likes
+    .groupBy((_, like) => like.id)
+    .count()(Materialized.as(likeCountStorename))
+
   def run(): KafkaStreams = {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
     streams.start()

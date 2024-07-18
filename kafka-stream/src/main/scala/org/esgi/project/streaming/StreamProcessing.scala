@@ -4,10 +4,11 @@ import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.streams.scala._
-import org.apache.kafka.streams.scala.kstream.{KTable, Materialized}
+import org.apache.kafka.streams.scala.kstream.{KStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
+import org.esgi.project.streaming.models.{Like, View}
 
-import java.util.Properties
+import java.util.{Properties, UUID}
 
 object StreamProcessing extends PlayJsonSupport {
 
@@ -20,6 +21,20 @@ object StreamProcessing extends PlayJsonSupport {
 
   // defining processing graph
   val builder: StreamsBuilder = new StreamsBuilder
+
+  // topic
+  val viewsTopicName: String = "views"
+  val likesTopicName: String = "likes"
+
+  val viewTopic = "views"
+  val likesTopic: String = "likes"
+
+  // Store names
+  val viewsCountStoreName = "views-count-store"
+  val likesCountStoreName = "likes-count-store"
+
+  val views = builder.stream[String, String](viewTopic)
+  val likes = builder.stream[String, String](likesTopic)
 
   val wordTopic = "words"
   val wordCountStoreName = "word-count-store"
@@ -39,6 +54,7 @@ object StreamProcessing extends PlayJsonSupport {
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable() {
       override def run(): Unit = {
         streams.close()
+
       }
     }))
     streams

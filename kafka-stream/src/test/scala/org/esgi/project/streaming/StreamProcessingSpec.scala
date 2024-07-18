@@ -6,6 +6,7 @@ import org.apache.kafka.streams.scala.serialization.Serdes
 import org.apache.kafka.streams.state.KeyValueStore
 import org.apache.kafka.streams.test.TestRecord
 import org.esgi.project.api.models.View
+import org.esgi.project.streaming.models.Like
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.jdk.CollectionConverters._
@@ -24,7 +25,14 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       View(1, "Kill Bill", "half"),
       View(1, "Kill Bill", "half")
     )
-//    val likes = {
+
+    val likes = List[Like](
+      Like(1, 5.1),
+      Like(1, 2.3)
+    )
+
+
+// val likes = {
 //      "id": 1,
 //      "score": 4.8
 //    }
@@ -41,11 +49,29 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
         toSerializer[View]
       )
 
+    val likeTopic = topologyTestDriver
+      .createInputTopic(
+        StreamProcessingTest.likeTopic,
+        Serdes.intSerde.serializer(),
+        toSerializer[Like]
+      )
+
     val viewCountStore: KeyValueStore[Int, Long] =
       topologyTestDriver
         .getKeyValueStore[Int, Long](
           StreamProcessingTest.viewCountStorename
         )
+
+
+    val likeCountStore: KeyValueStore[Int, Long] =
+      topologyTestDriver
+        .getKeyValueStore[Int, Long](
+          StreamProcessingTest.likeCountStorename
+        )
+
+    likeTopic.pipeRecordList(
+      likes.map(like => new TestRecord(like.id, like)).asJava
+    )
 
     // When
     viewTopic.pipeRecordList(
@@ -54,6 +80,7 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
 
     // Then
     assert(viewCountStore.get(1) == 2)
+    assert(likeCountStore.get(1) == 2)
 //    assert(viewCountStore.get("hello") == 2)
 //    assert(viewCountStore.get("world") == 1)
 //    assert(viewCountStore.get("moon") == 1)
