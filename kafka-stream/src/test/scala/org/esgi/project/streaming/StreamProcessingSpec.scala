@@ -24,6 +24,7 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
 
     val newViews = List[View](
       View(1, "Kill Bill", "half"),
+      View(1, "Kill Bill", "start_only"),
       View(2, "Matrix", "half")
     )
 
@@ -44,12 +45,6 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
         Serdes.intSerde.serializer(),
         toSerializer[View]
       )
-
-//    val viewCountStore: KeyValueStore[Int, Long] =
-//      topologyTestDriver
-//        .getKeyValueStore[Int, Long](
-//          StreamProcessingTest.viewCountStorename
-//        )
 
     val viewCountStore: KeyValueStore[String, Long] =
       topologyTestDriver
@@ -79,30 +74,66 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       newViews.map(view => new TestRecord(view.id, view, recordTime)).asJava
     )
     topologyTestDriver.advanceWallClockTime(Duration.ofMinutes(5))
+    val fullWindowStart = startTime.truncatedTo(ChronoUnit.MINUTES)
+    val fullWindowEnd = fullWindowStart.plus(Duration.ofMinutes(10))
 
     // Then
+    assert(viewCountStore.get("1-start_only") == 1)
     assert(viewCountStore.get("1-half") == 3)
     assert(viewCountStore.get("1-full") == 1)
+    assert(viewCountStore.get("2-start_only") == 0)
     assert(viewCountStore.get("2-half") == 1)
     assert(viewCountStore.get("2-full") == 1)
 
-
+    val windowedResults1Start =
+      fetchWindowedResults(viewCountWindowedStore, "1-start_only", windowedStartTime, windowedEndTime)
     val windowedResults1Half =
       fetchWindowedResults(viewCountWindowedStore, "1-half", windowedStartTime, windowedEndTime)
     val windowedResults1Full =
       fetchWindowedResults(viewCountWindowedStore, "1-full", windowedStartTime, windowedEndTime)
+    val windowedResults2Start =
+      fetchWindowedResults(viewCountWindowedStore, "2-start_only", windowedStartTime, windowedEndTime)
     val windowedResults2Full =
       fetchWindowedResults(viewCountWindowedStore, "2-full", windowedStartTime, windowedEndTime)
     val windowedResults2Half =
       fetchWindowedResults(viewCountWindowedStore, "2-half", windowedStartTime, windowedEndTime)
 
+    assert(windowedResults1Start == 1)
     assert(windowedResults1Half == 1)
     assert(windowedResults1Full == 0)
-    assert(windowedResults2Full == 0)
+    assert(windowedResults2Start == 0)
     assert(windowedResults2Half == 1)
+    assert(windowedResults2Full == 0)
+
+    val windowedFullResults1Start =
+      fetchWindowedResults(
+        viewCountWindowedStore,
+        "1-start_only",
+        startTime.truncatedTo(ChronoUnit.MINUTES),
+        fullWindowEnd
+      )
+    val windowedFullResults1Half =
+      fetchWindowedResults(
+        viewCountWindowedStore,
+        "1-half",
+        startTime.truncatedTo(ChronoUnit.MINUTES),
+        fullWindowEnd
+      )
+    val windowedFullResults1Full =
+      fetchWindowedResults(
+        viewCountWindowedStore,
+        "1-full",
+        startTime.truncatedTo(ChronoUnit.MINUTES),
+        fullWindowEnd
+      )
+//    assert(windowedFullResults1Start == 1)
+//    assert(windowedFullResults1Half == 3)
+//    assert(windowedFullResults1Full == 1)
   }
+
   def fetchWindowedResults(store: WindowStore[String, Long], key: String, from: Instant, to: Instant): Long = {
     val iterator = store.fetch(key, from, to)
     iterator.asScala.foldLeft(0L)((agg, kv) => agg + kv.value)
   }
+
 }
