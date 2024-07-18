@@ -6,7 +6,6 @@ import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore
 import org.esgi.project.api.models.{MeanLatencyForURLResponse, VisitCountResponse}
-import org.esgi.project.streaming.models.MeanLatencyForURL
 
 object WebServer extends PlayJsonSupport {
   def routes(streams: KafkaStreams): Route = {
