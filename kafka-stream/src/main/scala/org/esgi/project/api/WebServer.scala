@@ -1,5 +1,6 @@
 package org.esgi.project.api
 
+import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
@@ -11,7 +12,15 @@ import org.apache.kafka.streams.state.{
   WindowStore,
   WindowStoreIterator
 }
-import org.esgi.project.api.models.{MeanLatencyForURLResponse, MoviesResponse, ViewStats, VisitCountResponse}
+import org.esgi.project.api.models.{
+  MeanLatencyForURLResponse,
+  MoviesResponse,
+  View,
+  ViewCount,
+  ViewList,
+  ViewStats,
+  VisitCountResponse
+}
 import org.esgi.project.streaming.StreamProcessing
 import org.esgi.project.streaming.models.{MeanScoreforLike, ViewCountWithTitle}
 
@@ -92,6 +101,7 @@ object WebServer extends PlayJsonSupport {
         )
       )
 
+
 //    val highScoreStore: ReadOnlyKeyValueStore[Int, MeanScoreforLike] =
 //      streams.store("high-score-store", QueryableStoreTypes.keyValueStore[Int, MeanScoreforLike])
 //
@@ -107,35 +117,51 @@ object WebServer extends PlayJsonSupport {
             getMovieStats(id, viewCountStore, viewCountWindowedStore)
           )
         }
+      },
+      path("stats" / "ten" / "best" / "views") {
+        get {
+          val countviewstore: ReadOnlyKeyValueStore[Int, Long] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.ViewStorename,
+              QueryableStoreTypes.keyValueStore[Int, Long]
+            )
+          )
+          val results = ViewList(
+            views = countviewstore
+              .all()
+              .asScala
+              .map { case kv =>
+                ViewCount(id = kv.key, title = "", views = kv.value)
+              }
+              .toList
+              .sortBy(-_.views)
+              .take(10)
+          )
+          complete(StatusCodes.OK, results)
+        }
+      },
+      path("stats" / "ten" / "worse" / "views") {
+        get {
+          val countviewstore: ReadOnlyKeyValueStore[Int, Long] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.ViewStorename,
+              QueryableStoreTypes.keyValueStore[Int, Long]
+            )
+          )
+          val results = ViewList(
+            views = countviewstore
+              .all()
+              .asScala
+              .map { case kv =>
+                ViewCount(id = kv.key, title = "", views = kv.value)
+              }
+              .toList
+              .sortBy(+_.views)
+              .take(10)
+          )
+          complete(StatusCodes.OK, results)
+        }
       }
-//      path("stats" / "ten" / "best" / "score") {
-//        get {
-//          complete(
-//            getTopTenBestScores()
-//          )
-//        }
-//      },
-//      path("stats" / "ten" / "worse" / "score") {
-//        get {
-//          complete(
-//            getTopTenBestScores()
-//          )
-//        }
-//      },
-//      path("stats" / "ten" / "best" / "views") {
-//        get {
-//          complete(
-//            getTopTenBestScores()
-//          )
-//        }
-//      },
-//      path("stats" / "ten" / "worse" / "views") {
-//        get {
-//          complete(
-//            getTopTenBestScores()
-//          )
-//        }
-//      }
     )
   }
 }

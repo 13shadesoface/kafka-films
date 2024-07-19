@@ -43,7 +43,10 @@ object StreamProcessing extends PlayJsonSupport {
   val viewGroupedById: KGroupedStream[Int, View] =
     views.groupBy((_, view) => view.id)
 
-  val viewCounts: KTable[Int, Long] = viewGroupedById.count()(Materialized.as(ViewStorename))
+  val viewCounts: KTable[Int, ViewCountWithTitle] =
+    viewGroupedById.aggregate(ViewCountWithTitle(0L, ""))((key, view, aggregate) =>
+      ViewCountWithTitle(aggregate.count + 1, view.title)
+    )(Materialized.as(ViewStorename))
 
   val viewGroupedByIdAndCategory: KGroupedStream[String, View] =
     views.groupBy((_, view) => s"${view.id}-${view.view_category}")

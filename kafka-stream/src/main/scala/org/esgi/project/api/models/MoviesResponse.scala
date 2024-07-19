@@ -12,3 +12,21 @@ case class MoviesResponse(
 object MoviesResponse {
   implicit val format: OFormat[MoviesResponse] = Json.format[MoviesResponse]
 }
+
+case class ViewList(
+    views: List[ViewCount]
+)
+
+object ViewList {
+  implicit val format: OFormat[ViewList] = Json.format[ViewList]
+}
+
+case class ViewCount(
+    id: Int,
+    title: String,
+    views: Long
+)
+
+object ViewCount {
+  implicit val format: OFormat[ViewCount] = Json.format[ViewCount]
+}
