@@ -29,8 +29,6 @@ object StreamProcessingTest extends PlayJsonSupport {
   val builder: StreamsBuilder = new StreamsBuilder
 
   val viewTopic = "views"
-  val viewCountByWindowedIdAndCategoryStoreTest = "view-count-windowed-test-store"
-
   val likeTopic = "likes"
 
   val viewCountByIdCategoryStorename = "view-count-store"
