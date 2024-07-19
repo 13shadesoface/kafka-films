@@ -5,12 +5,10 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.streams.kstream.{JoinWindows, TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
-
 import org.apache.kafka.streams.scala.kstream.{KGroupedStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig, Topology}
 import org.esgi.project.api.models.{Like, View}
-import org.esgi.project.streaming.StreamProcessingTest.highScoreStoreName
-import org.esgi.project.streaming.models.MeanScoreforLike
+import org.esgi.project.streaming.models.{MeanScoreforLike, ViewCountWithTitle}
 
 import java.util.Properties
 import java.time.Instant
@@ -38,25 +36,38 @@ object StreamProcessingTest extends PlayJsonSupport {
   val highScoreStoreName = "high-score-store"
   val lowScoreStoreName = "low-score-store"
 
+  val ViewStorename = "view-store"
+
   val views = builder.stream[String, View](viewTopic)
   val likes = builder.stream[String, Like](likeTopic)
+
+  val viewGroupedById: KGroupedStream[Int, View] =
+    views.groupBy((_, view) => view.id)
+
+  val viewCounts: KTable[Int, ViewCountWithTitle] =
+    viewGroupedById.aggregate(ViewCountWithTitle(0L, ""))((key, view, aggregate) =>
+      ViewCountWithTitle(aggregate.count + 1, view.title)
+    )(Materialized.as(ViewStorename))
 
   val viewGroupedByIdAndCategory: KGroupedStream[String, View] =
     views.groupBy((_, view) => s"${view.id}-${view.view_category}")
 
-  val viewCountsByIdAndCategory: KTable[String, Long] =
-    viewGroupedByIdAndCategory.count()(Materialized.as(viewCountByIdCategoryStorename))
+//  val viewCountsByIdAndCategory: KTable[String, Long] =
+//    viewGroupedByIdAndCategory.count()(Materialized.as(viewCountByIdCategoryStorename))
+
+  val viewCountsByIdAndCategory: KTable[String, ViewCountWithTitle] =
+    viewGroupedByIdAndCategory.aggregate(ViewCountWithTitle(0L, ""))((key, view, aggregate) =>
+      ViewCountWithTitle(aggregate.count + 1, view.title)
+    )(Materialized.as(viewCountByIdCategoryStorename))
 
   val viewWindowedCounts: KTable[Windowed[String], Long] = viewGroupedByIdAndCategory
     .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)).advanceBy(Duration.ofMinutes(1)))
     .count()(Materialized.as(viewCountByWindowedIdAndCategoryStore))
 
-  // Calculer le nombre de likes par film
   val likesCountsById: KTable[Int, Long] = likes
     .groupBy((_, like) => like.id)
     .count()(Materialized.as(likeCountStorename))
 
-  // Agréger les scores pour calculer le score moyen par film
   val averageScoreById: KTable[Int, MeanScoreforLike] = likes
     .groupBy((_, like) => like.id)
     .aggregate[MeanScoreforLike](
@@ -81,7 +92,6 @@ object StreamProcessingTest extends PlayJsonSupport {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
     streams.start()
 
-    // Add shutdown hook to respond to SIGTERM and gracefully close Kafka Streams
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable() {
       override def run(): Unit = {
         streams.close()

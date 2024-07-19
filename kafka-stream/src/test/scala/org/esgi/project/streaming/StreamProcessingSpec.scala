@@ -6,7 +6,7 @@ import org.apache.kafka.streams.scala.serialization.Serdes
 import org.apache.kafka.streams.state.{KeyValueStore, WindowStore}
 import org.apache.kafka.streams.test.TestRecord
 import org.esgi.project.api.models.{Like, View}
-import org.esgi.project.streaming.models.MeanScoreforLike
+import org.esgi.project.streaming.models.{MeanScoreforLike, ViewCountWithTitle}
 import org.scalatest.funsuite.AnyFunSuite
 
 import java.time.temporal.ChronoUnit
@@ -68,9 +68,9 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
         toSerializer[Like]
       )
 
-    val viewCountStore: KeyValueStore[String, Long] =
+    val viewCountStore: KeyValueStore[String, ViewCountWithTitle] =
       topologyTestDriver
-        .getKeyValueStore[String, Long](
+        .getKeyValueStore[String, ViewCountWithTitle](
           StreamProcessingTest.viewCountByIdCategoryStorename
         )
 
@@ -126,14 +126,13 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
     topologyTestDriver.advanceWallClockTime(Duration.ofMinutes(5))
     val fullWindowStart = startTime.truncatedTo(ChronoUnit.MINUTES)
     val fullWindowEnd = fullWindowStart.plus(Duration.ofMinutes(10))
-    
+
     // Then
-    assert(viewCountStore.get("1-start_only") == 1)
-    assert(viewCountStore.get("1-half") == 3)
-    assert(viewCountStore.get("1-full") == 1)
-    assert(viewCountStore.get("2-start_only") == 0)
-    assert(viewCountStore.get("2-half") == 1)
-    assert(viewCountStore.get("2-full") == 1)
+    assert(viewCountStore.get("1-start_only").count == 1)
+    assert(viewCountStore.get("1-half").count == 3)
+    assert(viewCountStore.get("1-full").count == 1)
+    assert(viewCountStore.get("2-half").count == 1)
+    assert(viewCountStore.get("2-full").count == 1)
 
     val windowedResults1Start =
       fetchWindowedResults(viewCountWindowedStore, "1-start_only", windowedStartTime, windowedEndTime)
@@ -154,14 +153,13 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
     assert(windowedResults2Start == 0)
     assert(windowedResults2Half == 1)
     assert(windowedResults2Full == 0)
-    
+
     val highRatedMovies = highRatedStore.all().asScala.toList.sortBy(_.value.meanScore).take(3).reverse
     val lowRatedMovies = lowRatedStore.all().asScala.toList.sortBy(_.value.meanScore).take(2)
 
     assert(highRatedMovies.head.value.meanScore == 5.8)
     assert(lowRatedMovies.head.value.meanScore == 1.3)
 
-    
     assert(avgScoreStore.get(1).meanScore == 5.187499999999999)
   }
 
