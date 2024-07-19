@@ -155,7 +155,7 @@ object WebServer extends PlayJsonSupport {
                 ViewCount(id = kv.key, title = kv.value.title, views = kv.value.count)
               }
               .toList
-              .sortBy(-_.views)
+              .sortBy(+_.views)
               .take(10)
           )
           complete(StatusCodes.OK, results)
