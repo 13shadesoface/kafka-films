@@ -13,6 +13,8 @@ import org.apache.kafka.streams.state.{
   WindowStoreIterator
 }
 import org.esgi.project.api.models.{
+  LikeCount,
+  LikeList,
   MeanLatencyForURLResponse,
   MoviesResponse,
   View,
@@ -158,6 +160,52 @@ object WebServer extends PlayJsonSupport {
               .sortBy(+_.views)
               .take(10)
           )
+          complete(StatusCodes.OK, results)
+        }
+      },
+      path("stats" / "ten" / "best" / "score") {
+        get {
+          val countlikestore: ReadOnlyKeyValueStore[Int, MeanScoreforLike] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.avgScoreStoreName,
+              QueryableStoreTypes.keyValueStore[Int, MeanScoreforLike]
+            )
+          )
+          val results =
+            LikeList(
+              countlikestore
+                .all()
+                .asScala
+                .map { case kv =>
+                  LikeCount(id = kv.key, title = kv.key.toString, scores = kv.value.meanScore)
+                }
+                .toList
+                .sortBy(-_.scores)
+                .take(10)
+            )
+          complete(StatusCodes.OK, results)
+        }
+      },
+      path("stats" / "ten" / "worst" / "score") {
+        get {
+          val countlikestore: ReadOnlyKeyValueStore[Int, MeanScoreforLike] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.avgScoreStoreName,
+              QueryableStoreTypes.keyValueStore[Int, MeanScoreforLike]
+            )
+          )
+          val results =
+            LikeList(
+              countlikestore
+                .all()
+                .asScala
+                .map { case kv =>
+                  LikeCount(id = kv.key, title = kv.key.toString, scores = kv.value.meanScore)
+                }
+                .toList
+                .sortBy(+_.scores)
+                .take(10)
+            )
           complete(StatusCodes.OK, results)
         }
       }

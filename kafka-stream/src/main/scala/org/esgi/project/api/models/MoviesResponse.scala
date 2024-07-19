@@ -30,3 +30,22 @@ case class ViewCount(
 object ViewCount {
   implicit val format: OFormat[ViewCount] = Json.format[ViewCount]
 }
+
+case class LikeCount(
+                      id: Int,
+                      title: String,
+                      scores: Double
+                    )
+
+case class LikeList(
+    views: List[LikeCount]
+)
+
+object LikeList {
+  implicit val format: OFormat[LikeList] = Json.format[LikeList]
+}
+
+
+object LikeCount {
+  implicit val format: OFormat[LikeCount] = Json.format[LikeCount]
+}
