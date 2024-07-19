@@ -101,7 +101,6 @@ object WebServer extends PlayJsonSupport {
         )
       )
 
-
 //    val highScoreStore: ReadOnlyKeyValueStore[Int, MeanScoreforLike] =
 //      streams.store("high-score-store", QueryableStoreTypes.keyValueStore[Int, MeanScoreforLike])
 //
@@ -120,10 +119,10 @@ object WebServer extends PlayJsonSupport {
       },
       path("stats" / "ten" / "best" / "views") {
         get {
-          val countviewstore: ReadOnlyKeyValueStore[Int, Long] = streams.store(
+          val countviewstore: ReadOnlyKeyValueStore[Int, ViewCountWithTitle] = streams.store(
             StoreQueryParameters.fromNameAndType(
               StreamProcessing.ViewStorename,
-              QueryableStoreTypes.keyValueStore[Int, Long]
+              QueryableStoreTypes.keyValueStore[Int, ViewCountWithTitle]
             )
           )
           val results = ViewList(
@@ -131,7 +130,7 @@ object WebServer extends PlayJsonSupport {
               .all()
               .asScala
               .map { case kv =>
-                ViewCount(id = kv.key, title = "", views = kv.value)
+                ViewCount(id = kv.key, title = kv.value.title, views = kv.value.count)
               }
               .toList
               .sortBy(-_.views)
@@ -140,12 +139,12 @@ object WebServer extends PlayJsonSupport {
           complete(StatusCodes.OK, results)
         }
       },
-      path("stats" / "ten" / "worse" / "views") {
+      path("stats" / "ten" / "worst" / "views") {
         get {
-          val countviewstore: ReadOnlyKeyValueStore[Int, Long] = streams.store(
+          val countviewstore: ReadOnlyKeyValueStore[Int, ViewCountWithTitle] = streams.store(
             StoreQueryParameters.fromNameAndType(
               StreamProcessing.ViewStorename,
-              QueryableStoreTypes.keyValueStore[Int, Long]
+              QueryableStoreTypes.keyValueStore[Int, ViewCountWithTitle]
             )
           )
           val results = ViewList(
@@ -153,10 +152,10 @@ object WebServer extends PlayJsonSupport {
               .all()
               .asScala
               .map { case kv =>
-                ViewCount(id = kv.key, title = "", views = kv.value)
+                ViewCount(id = kv.key, title = kv.value.title, views = kv.value.count)
               }
               .toList
-              .sortBy(+_.views)
+              .sortBy(-_.views)
               .take(10)
           )
           complete(StatusCodes.OK, results)
