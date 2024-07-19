@@ -36,8 +36,18 @@ object StreamProcessingTest extends PlayJsonSupport {
   val highScoreStoreName = "high-score-store"
   val lowScoreStoreName = "low-score-store"
 
+  val ViewStorename = "view-store"
+
   val views = builder.stream[String, View](viewTopic)
   val likes = builder.stream[String, Like](likeTopic)
+
+  val viewGroupedById: KGroupedStream[Int, View] =
+    views.groupBy((_, view) => view.id)
+
+  val viewCounts: KTable[Int, ViewCountWithTitle] =
+    viewGroupedById.aggregate(ViewCountWithTitle(0L, ""))((key, view, aggregate) =>
+      ViewCountWithTitle(aggregate.count + 1, view.title)
+    )(Materialized.as(ViewStorename))
 
   val viewGroupedByIdAndCategory: KGroupedStream[String, View] =
     views.groupBy((_, view) => s"${view.id}-${view.view_category}")
@@ -57,7 +67,6 @@ object StreamProcessingTest extends PlayJsonSupport {
   val likesCountsById: KTable[Int, Long] = likes
     .groupBy((_, like) => like.id)
     .count()(Materialized.as(likeCountStorename))
-
 
   val averageScoreById: KTable[Int, MeanScoreforLike] = likes
     .groupBy((_, like) => like.id)
@@ -82,7 +91,6 @@ object StreamProcessingTest extends PlayJsonSupport {
   def run(): KafkaStreams = {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
     streams.start()
-
 
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable() {
       override def run(): Unit = {
